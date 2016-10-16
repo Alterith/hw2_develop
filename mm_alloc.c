@@ -15,7 +15,7 @@ mm_malloc(size_t size) {
     return NULL;
   }
   if(head==NULL){
-    head = (struct block*)(sbrk((size_t)pow(2,MAX_EXP)+sizeof(struct block)));
+    head = (struct block*)(sbrk((size_t)pow(2,MAX_EXP)+(size_t)(MAX_EXP*sizeof(struct block))));
     head->size = (size_t)pow(2,MAX_EXP);
     head->free = true;
     head->data = (void *)((size_t)head + (size_t)(sizeof(struct block)));
@@ -98,25 +98,51 @@ mm_free(void* ptr) {
             }
             lowerbd->size = (size_t)(2*(lowerbd->size));
             lowerbd->merged_buddy[endBuddy-i] = NULL;
-	    printf("End list: %p\n",lowerbd->merged_buddy[endBuddy-i]);
-	    printf("End list buddy: %p\n",lowerbd->merged_buddy[endBuddy-i]);
+	    //printf("End list: %p\n",lowerbd->merged_buddy[endBuddy-i]);
+	    //printf("End list buddy: %p\n",lowerbd->merged_buddy[endBuddy-i]);
             lowerbd->next = lowerbd->next->next;
           }else{
-	    curr->merged_buddy[endBuddy-i] = NULL;
-	    curr->next = curr->next->next;
-	    printf("break\n");
+	           curr->merged_buddy[endBuddy-i] = NULL;
+	           curr->next = curr->next->next;
+	    //printf("break\n");
             break;
           }
         }
       }
     }
-    print_list();
+    //print_list();
 }
 
 /** mm_realloc - changes the data block to have the specified size **/
 void*
 mm_realloc(void* ptr, size_t size) {
     // TODO
+
+    if(ptr == NULL){
+      return mm_malloc(size);
+    }
+    struct block* curr = (struct block*)((size_t)ptr - (size_t)sizeof(struct block));
+
+    if((curr->size>=size)&&(curr->size/2<size)){
+      return ptr;
+    }else{
+      void* newData = mm_malloc(size);
+      if(newData == NULL){
+        if(curr->size>=size){
+          return ptr;
+        }
+      }else{
+        size_t min = 0;
+        if(size<=curr->size){
+          min = size;
+        }else{
+          min = size;
+        }
+        memcpy(newData,ptr,min);
+        mm_free(ptr);
+        return newData;
+      }
+    }
     return NULL;
 }
 

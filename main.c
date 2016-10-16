@@ -39,22 +39,22 @@ main(int argc, char **argv)
     for(i = 0; i < 1028; i++) passed &= (data[i]==i);
     printf("%s\n",passed?"'passed'":"failed!");
 
-    //printf("Basic free......");
-    //mm_free(ddata);
-    //printf("'passed'\n");
+    printf("Basic free......");
+    mm_free(ddata);
+    printf("'passed'\n");
 
     printf("Array free......");
     mm_free(data);
     printf("'passed'\n");
 
-//    printf("Basic realloc...");
-//    ddata = (double*) mm_malloc(sizeof(double));
-//    *ddata = 12345.6789;
-//    double* old = ddata;
-//    ddata = (double*) mm_realloc(ddata,1000*sizeof(double));
-//    passed = ((old<ddata)&&((*ddata)==12345.6789));
-//    mm_free(ddata);
-//    printf("%s\n",passed?"'passed'":"failed!");
+    printf("Basic realloc...");
+    ddata = (double*) mm_malloc(sizeof(double));
+    *ddata = 12345.6789;
+    double* old = ddata;
+    ddata = (double*) mm_realloc(ddata,1000*sizeof(double));
+    passed = ((old<ddata)&&((*ddata)==12345.6789));
+    mm_free(ddata);
+    printf("%s\n",passed?"'passed'":"failed!");
 
     return 0;
 }
