@@ -4,9 +4,7 @@
 #include <string.h>
 
 int main(void){
-  void* test = sbrk(0);
-  printf("\n%p\n",test);
-  void* test2 = sbrk(1024);
-  printf("\n%p\n",test2);
+  //size_t s = sizeof(double);
+  printf("%ul\n", (unsigned long)(1024*(sizeof(int))));
   return 0;
 }

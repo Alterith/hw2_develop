@@ -4,70 +4,63 @@
 #include <unistd.h>
 #include <stddef.h>
 #include <string.h>
+#include <math.h>
 
 /** mm_malloc - allocate a block of at least size bytes **/
 void*
 mm_malloc(size_t size) {
   // TODO
   //if first allocation
-  if(first){
-    void* mem_begin = sbrk((2^MAX_EXP));
-    void* test = (void*)-1;
-    if(mem_begin == test){
-      return NULL;
-    }
-    head->size = (2^MAX_EXP);
+  if(size == (size_t)0){
+    return NULL;
+  }
+  if(head==NULL){
+    head = (struct block*)(sbrk((size_t)pow(2,MAX_EXP)+sizeof(struct block)));
+    head->size = (size_t)pow(2,MAX_EXP);
     head->free = true;
-    head->data = NULL;
+    head->data = (void *)((size_t)head + (size_t)(sizeof(struct block)));
     head->next = NULL;
     head->buddy = NULL;
-
     for (size_t i = 0; i < MAX_EXP; i++) {
       head->merged_buddy[i] = NULL;
     }
-    first = false;
-    structSize = sizeof(*head);
   }
 
-  //buddy allocation
-  size_t allocation_size = size + structSize;
-  //if the curr block is large enough to store the data
-  block* curr = head;
-  if(curr->size>=allocation_size){
-    //if the curr block is free
-    if(curr->free == true){
-      //if curr->size/2 fits the data
-      while(((curr->size)/2)>=allocation_size){
-        block* buddy;
-        buddy->size = ((curr->size)/2);
-        buddy->free = true;
-        buddy->data = NULL;
-        buddy->next = curr->next;
-        buddy->buddy = curr;
-
-        for (size_t i = 0; i < MAX_EXP; i++) {
-          if((buddy->merged_buddy[i] == NULL)){
-            buddy->merged_buddy[i] = buddy->buddy;
-          }
-        }
-        curr->size = ((curr->size)/2);
-        curr->free = true;
-        curr->data = NULL;
-        curr->next = buddy;
-        curr->buddy = buddy;
-        for (size_t i = 0; i < MAX_EXP; i++) {
-          if(!(curr->merged_buddy[i] == NULL)){
-            curr->merged_buddy[i] = curr->buddy;
-          }
-        }
-      }
-      curr->free = false;
-      return curr;
-    }else if(curr->free != true){
-
+  size_t alloc_size = (size_t)((size_t)size + (size_t)sizeof(struct block));
+  struct block* curr = head;
+  while((curr->free == false)||((size_t)(curr->size)<alloc_size)){
+    if(curr->next == NULL){
+      return NULL;
     }
+    curr = curr->next;
+  }
+  while((curr->free == true)&&((size_t)(curr->size/2)>=alloc_size)){
+    curr->size = (size_t)((curr->size)/2);
+    struct block* buddy = (struct block*)((size_t)curr + (size_t)(curr->size));
+    buddy->size = (size_t)(curr->size);
+    buddy->free = true;
+    buddy->data = (void*)((size_t)buddy + (size_t)sizeof(struct block));
+    buddy->next = curr->next;
+    buddy->buddy = curr;
+    for(size_t i = 0; i < MAX_EXP; i++){
+      if(curr->merged_buddy[i] == NULL) {
+        curr->merged_buddy[i] = curr->buddy;
+        break;
+      }
+    }
+    curr->buddy = buddy;
+    curr->next = buddy;
+    for (size_t i = 0; i < MAX_EXP; i++) {
+      buddy->merged_buddy[i] = curr->merged_buddy[i];
+    }
+    //print_list();
   }
 
+  if((curr->free == true)&&((size_t)(curr->size)>=(size_t)alloc_size)){
+    curr->free = false;
+    //print_list();
+    return curr->data;
+  }
   return NULL;
 }
 
@@ -75,6 +68,49 @@ mm_malloc(size_t size) {
 void
 mm_free(void* ptr) {
     // TODO
+    if(ptr!=NULL){
+      struct block* curr = (struct block*)((size_t)ptr - (size_t)sizeof(struct block));
+      curr->free = true;
+      struct block* lowerbd = NULL;
+      if(curr->buddy->free){
+        if(((size_t)(curr->buddy))>((size_t)curr)){
+          lowerbd = curr;
+        }else{
+          lowerbd = curr->buddy;
+        }
+        lowerbd->size = (size_t)(2*(lowerbd->size));
+        size_t endBuddy = -1;
+        for (size_t i = 0; i < MAX_EXP; i++) {
+          if(lowerbd->merged_buddy[i]==NULL){
+            endBuddy = i-1;
+            break;
+          }
+        }
+
+        for (size_t i = 0; i <= endBuddy+1; i++) {
+          lowerbd->buddy = lowerbd->merged_buddy[endBuddy-i];
+          curr = lowerbd;
+          if(curr->buddy->free == true){
+            if(((size_t)(curr->buddy))>((size_t)curr)){
+              lowerbd = curr;
+            }else{
+              lowerbd = curr->buddy;
+            }
+            lowerbd->size = (size_t)(2*(lowerbd->size));
+            lowerbd->merged_buddy[endBuddy-i] = NULL;
+	    printf("End list: %p\n",lowerbd->merged_buddy[endBuddy-i]);
+	    printf("End list buddy: %p\n",lowerbd->merged_buddy[endBuddy-i]);
+            lowerbd->next = lowerbd->next->next;
+          }else{
+	    curr->merged_buddy[endBuddy-i] = NULL;
+	    curr->next = curr->next->next;
+	    printf("break\n");
+            break;
+          }
+        }
+      }
+    }
+    print_list();
 }
 
 /** mm_realloc - changes the data block to have the specified size **/
@@ -96,15 +132,15 @@ print_block(struct block* b) {
   }
   else {
     int i = 0;
-    printf("Strt = %lx\n",(unsigned long) b);
-    printf("Size = %lu\n",b->size);
+    printf("Strt = %lx\n",(size_t) b);
+    printf("Size = %lx\n",(size_t)b->size);
     printf("Free = %s\n",(b->free)?"true":"false");
-    printf("Data = %lx\n",(unsigned long) b->data);
-    printf("Next = %lx\n",(unsigned long) b->next);
-    printf("Buddy = %lx\n",(unsigned long) b->buddy);
+    printf("Data = %lx\n",(size_t) b->data);
+    printf("Next = %lx\n",(size_t) b->next);
+    printf("Buddy = %lx\n",(size_t) b->buddy);
     printf("Merged Buddies = ");
     while(b->merged_buddy[i] && i < MAX_EXP) {
-        printf("%lx, ",(unsigned long) b->merged_buddy[i]);
+        printf("%lx, ",(size_t) b->merged_buddy[i]);
         i++;
     }
     printf("\n\n");

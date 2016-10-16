@@ -24,7 +24,6 @@ struct block {
 // pointer to start of list
 struct block* head;
 // bool to indicate first allocation
-bool first = true;
 // functions to be implemented in mm_alloc.c
 void* mm_malloc(size_t size);
 void* mm_realloc(void* ptr, size_t size);
